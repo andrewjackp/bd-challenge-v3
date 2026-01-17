@@ -3,6 +3,7 @@ import { client } from "@/lib/shopify/serverClient";
 import { env } from "@/env";
 import { getShop } from "@/lib/shopify/graphql/query/getShop";
 import { getProducts } from "@/lib/shopify/graphql/query/getProducts";
+import { ProductList } from "./components/product-list/ProductList";
 
 export default async function Home() {
   "use cache";
@@ -16,6 +17,9 @@ export default async function Home() {
     },
   });
 
+  const products =
+  productsResp.data?.collection?.products?.nodes ?? [];
+
   console.log("SHOP", shopResp.data?.shop?.name);
 
 
@@ -26,12 +30,8 @@ export default async function Home() {
           Hello <Components.NameDisplay /> and good luck 😄!
         </h1>
 
-        {shopResp.data?.shop?.name && (
-          <h2 className="text-4xl">
-            Store name: {shopResp.data.shop.name}
-          </h2>
-        )}
-
+        <ProductList products={products} />
+        
         <form>
           <Components.NameInput
             className="border-2 border-yellow-500 rounded p-4 text-2xl w-full dark:bg-black dark:text-gray-300 dark:placeholder:text-gray-400"
