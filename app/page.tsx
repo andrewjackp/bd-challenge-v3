@@ -4,6 +4,11 @@ import { getShop } from "@/lib/shopify/graphql/query";
 
 export default async function Home() {
   "use cache";
+  console.log({
+  store: process.env.NEXT_PUBLIC_SHOPIFY_STORE_NAME,
+  version: process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_API_VERSION,
+})
+
   const resp = await client.request(getShop);
   return (
     <Components.NameInputRoot initialValue="world">
