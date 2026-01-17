@@ -1,5 +1,5 @@
 export const getShop = `#graphql
-  query getShop {
+  query GetShop {
     shop {
       name
       description

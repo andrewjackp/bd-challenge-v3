@@ -1,24 +1,37 @@
 import * as Components from "./components";
 import { client } from "@/lib/shopify/serverClient";
-import { getShop } from "@/lib/shopify/graphql/query";
+import { env } from "@/env";
+import { getShop } from "@/lib/shopify/graphql/query/getShop";
+import { getProducts } from "@/lib/shopify/graphql/query/getProducts";
 
 export default async function Home() {
   "use cache";
-  console.log({
-  store: process.env.NEXT_PUBLIC_SHOPIFY_STORE_NAME,
-  version: process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_API_VERSION,
-})
 
-  const resp = await client.request(getShop);
+  const shopResp = await client.request(getShop);
+
+  const productsResp = await client.request(getProducts, {
+    variables: {
+      handle: "frontpage",
+      first: 8,
+    },
+  });
+
+  console.log("SHOP", shopResp.data?.shop?.name);
+
+
   return (
     <Components.NameInputRoot initialValue="world">
       <main className="w-screen h-screen flex flex-col gap-8 justify-center items-center max-w-2xl mx-auto">
         <h1 className="text-6xl">
           Hello <Components.NameDisplay /> and good luck 😄!
         </h1>
-        {resp.data?.shop.name && (
-          <h2 className="text-4xl">Store name: {resp.data?.shop?.name}</h2>
+
+        {shopResp.data?.shop?.name && (
+          <h2 className="text-4xl">
+            Store name: {shopResp.data.shop.name}
+          </h2>
         )}
+
         <form>
           <Components.NameInput
             className="border-2 border-yellow-500 rounded p-4 text-2xl w-full dark:bg-black dark:text-gray-300 dark:placeholder:text-gray-400"
