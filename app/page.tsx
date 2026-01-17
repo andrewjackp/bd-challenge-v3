@@ -1,6 +1,7 @@
 import * as Components from "./components";
 import { client } from "@/lib/shopify/serverClient";
 import { env } from "@/env";
+import { getCollections } from "@/lib/shopify/graphql/query/getCollections";
 import { getShop } from "@/lib/shopify/graphql/query/getShop";
 import { getProducts } from "@/lib/shopify/graphql/query/getProducts";
 import { ProductList } from "./components/product-list/ProductList";
@@ -10,35 +11,39 @@ export default async function Home() {
 
   const shopResp = await client.request(getShop);
 
+  const COLLECTION_HANDLE = "graphics-cards"; // or "accessories" / "all"
+
   const productsResp = await client.request(getProducts, {
     variables: {
-      handle: "frontpage",
+      handle: COLLECTION_HANDLE,
       first: 8,
     },
   });
 
-  const products =
-  productsResp.data?.collection?.products?.nodes ?? [];
+  const products = productsResp.data?.collection?.products?.nodes ?? [];
 
-  console.log("SHOP", shopResp.data?.shop?.name);
-
+  console.log("COLLECTION_DEBUG", {
+    handle: COLLECTION_HANDLE,
+    hasCollection: !!productsResp.data?.collection,
+    collectionTitle: productsResp.data?.collection?.title,
+    productCount: products.length,
+    errors: productsResp.errors,
+  });
 
   return (
     <Components.NameInputRoot initialValue="world">
       <main className="w-screen h-screen flex flex-col gap-8 justify-center items-center max-w-2xl mx-auto">
-        <h1 className="text-6xl">
+        <ProductList products={products} />
+{/*        <h1 className="text-6xl">
           Hello <Components.NameDisplay /> and good luck 😄!
         </h1>
-
-        <ProductList products={products} />
-        
         <form>
           <Components.NameInput
             className="border-2 border-yellow-500 rounded p-4 text-2xl w-full dark:bg-black dark:text-gray-300 dark:placeholder:text-gray-400"
             name="name"
             placeholder="name"
           />
-        </form>
+        </form>*/}
       </main>
     </Components.NameInputRoot>
   );
