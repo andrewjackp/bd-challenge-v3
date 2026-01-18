@@ -5,14 +5,33 @@ export const getProductByHandle = /* GraphQL */ `
       title
       handle
       description
+
       featuredImage {
         url
         altText
       }
-      priceRange {
-        minVariantPrice {
-          amount
-          currencyCode
+
+      options {
+        name
+        values
+      }
+
+      variants(first: 100) {
+        nodes {
+          id
+          availableForSale
+          selectedOptions {
+            name
+            value
+          }
+          price {
+            amount
+            currencyCode
+          }
+          image {
+            url
+            altText
+          }
         }
       }
     }

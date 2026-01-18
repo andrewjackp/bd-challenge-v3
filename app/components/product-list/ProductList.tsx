@@ -47,16 +47,64 @@ var closeModal = () => {
   );
 };
 
+function toSelectionMap(selectedOptionsArr) {
+  var map = {};
+  (selectedOptionsArr ?? []).forEach((opt) => {
+    map[opt.name] = opt.value;
+  });
+  return map;
+}
+
+function variantMatchesSelection(variant, selection) {
+  var vMap = toSelectionMap(variant.selectedOptions);
+
+  // selection can be partial: only compare keys that exist in selection
+  for (var key in selection) {
+    if (!selection[key]) continue;
+    if (vMap[key] !== selection[key]) return false;
+  }
+  return true;
+}
+
+function resolveVariant(variants, selection) {
+  // Prefer an available variant that matches
+  var match = variants.find(
+    (v) => v.availableForSale && variantMatchesSelection(v, selection),
+  );
+  if (match) return match;
+
+  // Fall back: any matching variant (even unavailable)
+  return variants.find((v) => variantMatchesSelection(v, selection)) ?? null;
+}
+
+function isOptionValueEnabled(variants, selection, optionName, value) {
+  // test if there exists an available variant that matches current selection
+  // plus this proposed option=value
+  var nextSelection = { ...selection, [optionName]: value };
+
+  return variants.some(
+    (v) => v.availableForSale && variantMatchesSelection(v, nextSelection),
+  );
+}
+
+
 const QuickViewModal = ({ product, onClose }) => {
   var closeBtnRef = useRef(null);
+  var modalRef = useRef(null);
 
   var [isLoading, setIsLoading] = useState(true);
   var [details, setDetails] = useState(null);
   var [error, setError] = useState(null);
 
+  var [selectedOptions, setSelectedOptions] = useState({});
+
+  var options = details?.options ?? [];
+  var variants = details?.variants?.nodes ?? [];
+
   // focus moves into modal on open
   useEffect(() => {
-    if (closeBtnRef.current) closeBtnRef.current.focus();
+    if (modalRef.current) modalRef.current.focus();
+    else if (closeBtnRef.current) closeBtnRef.current.focus();
   }, []);
 
   // lock background scroll while open
@@ -67,15 +115,6 @@ const QuickViewModal = ({ product, onClose }) => {
       document.body.style.overflow = prevOverflow;
     };
   }, []);
-
-  var modalRef = useRef(null);
-
-  useEffect(() => {
-    // focus moves into modal on open
-    if (modalRef.current) modalRef.current.focus();
-    else if (closeBtnRef.current) closeBtnRef.current.focus();
-  }, []);
-
 
   // close on esc
   useEffect(() => {
@@ -95,8 +134,9 @@ const QuickViewModal = ({ product, onClose }) => {
         setIsLoading(true);
         setError(null);
 
-        // NOTE: implement /api/product?handle=... below
-        var res = await fetch(`/api/product?handle=${encodeURIComponent(product.handle)}`);
+        var res = await fetch(
+          `/api/product?handle=${encodeURIComponent(product.handle)}`
+        );
         var json = await res.json();
 
         if (!res.ok) throw new Error(json?.error ?? "Failed to load product");
@@ -115,8 +155,32 @@ const QuickViewModal = ({ product, onClose }) => {
     };
   }, [product.handle]);
 
-  var img = details?.featuredImage ?? product?.featuredImage;
-  var money = details?.priceRange?.minVariantPrice ?? product?.priceRange?.minVariantPrice;
+  // initialize selection after details load
+  useEffect(() => {
+    if (!details) return;
+
+    var firstAvailable =
+      (details.variants?.nodes ?? []).find((v) => v.availableForSale) ??
+      (details.variants?.nodes ?? [])[0];
+
+    if (!firstAvailable) return;
+
+    setSelectedOptions(toSelectionMap(firstAvailable.selectedOptions));
+  }, [details]);
+
+  var resolvedVariant = useMemo(() => {
+    if (!variants.length) return null;
+    return resolveVariant(variants, selectedOptions);
+  }, [variants, selectedOptions]);
+
+  var img =
+    resolvedVariant?.image ??
+    details?.featuredImage ??
+    product?.featuredImage;
+
+  var money =
+    resolvedVariant?.price ??
+    null; // keep it simple; price comes from variant
 
   return (
     <div
@@ -124,7 +188,7 @@ const QuickViewModal = ({ product, onClose }) => {
       role="dialog"
       aria-modal="true"
       aria-label={`Quick View: ${product.title}`}
-      onClick={onClose} // backdrop click closes
+      onClick={onClose}
     >
       <div className="absolute inset-0 bg-black/60" />
 
@@ -150,7 +214,6 @@ const QuickViewModal = ({ product, onClose }) => {
           </button>
         </div>
 
-        {/* body */}
         <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left: image */}
           <div>
@@ -167,27 +230,70 @@ const QuickViewModal = ({ product, onClose }) => {
             )}
           </div>
 
-          {/* right: details */}
-          <div>
+          {/* Right: details (skeleton / error / options) */}
+          <div className="text-sm">
             {isLoading ? (
               <SkeletonDetails />
             ) : error ? (
-              <div className="text-sm">
+              <div>
                 <div className="font-medium">Couldn’t load product details.</div>
                 <div className="opacity-70 mt-1">{error}</div>
               </div>
             ) : (
-              <div className="text-sm">
-                <div className="opacity-70">Handle</div>
-                <div className="mt-1 font-mono">{product.handle}</div>
+              <>
+                {/* Options */}
+                {options.map((opt) => (
+                  <div key={opt.name} className="mt-4 first:mt-0">
+                    <div className="opacity-70">{opt.name}</div>
 
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {opt.values.map((val) => {
+                        var isSelected = selectedOptions?.[opt.name] === val;
+                        var isEnabled = isOptionValueEnabled(
+                          variants,
+                          selectedOptions,
+                          opt.name,
+                          val
+                        );
+
+                        return (
+                          <button
+                            key={val}
+                            type="button"
+                            disabled={!isEnabled}
+                            onClick={() => {
+                              if (!isEnabled) return;
+                              setSelectedOptions((prev) => ({
+                                ...prev,
+                                [opt.name]: val,
+                              }));
+                            }}
+                            className={[
+                              "px-3 py-2 rounded-full border text-sm transition",
+                              isSelected
+                                ? "border-black dark:border-white"
+                                : "border-black/10 dark:border-white/10",
+                              isEnabled
+                                ? "hover:bg-black/5 dark:hover:bg-white/10"
+                                : "opacity-40 cursor-not-allowed",
+                            ].join(" ")}
+                          >
+                            {val}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Description */}
                 {details?.description ? (
                   <>
-                    <div className="opacity-70 mt-4">Description</div>
+                    <div className="opacity-70 mt-6">Description</div>
                     <p className="mt-1 leading-6">{details.description}</p>
                   </>
                 ) : null}
-              </div>
+              </>
             )}
           </div>
         </div>
