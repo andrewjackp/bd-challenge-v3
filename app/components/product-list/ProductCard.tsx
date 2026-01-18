@@ -56,23 +56,19 @@ export const ProductCard = ({ product, onQuickView }) => {
 
         <button
           type="button"
-          className="
-            mt-4
-            inline-flex
-            items-center
-            justify-center
-            self-start
-            rounded-lg
-            border
-            border-black/10
-            dark:border-white/10
-            px-3
-            py-2
-            text-sm
-            hover:bg-black/5
-            dark:hover:bg-white/10
-          "
-          onClick={onQuickView}
+          className="mt-4 
+          inline-flex
+          items-center
+          justify-center
+          self-start
+          rounded-lg 
+          border border-black/10 
+          dark:border-white/10 
+          px-3 
+          py-2 text-sm 
+          hover:bg-black/5 
+          dark:hover:bg-white/10"
+          onClick={(e) => onQuickView(e.currentTarget)}
         >
           Quick View
         </button>
