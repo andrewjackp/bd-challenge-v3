@@ -16,6 +16,51 @@ export const ProductList = ({ products }) => {
     return products.find((p) => p.id === activeId) ?? null;
   }, [activeId, products]);
 
+type Money = {
+  amount: string;
+  currencyCode: string;
+};
+
+type Image = {
+  url: string;
+  altText?: string | null;
+};
+
+type SelectedOption = {
+  name: string;
+  value: string;
+};
+
+type Variant = {
+  id: string;
+  availableForSale: boolean;
+  selectedOptions: SelectedOption[];
+  price: Money;
+  image?: Image | null;
+};
+
+type ProductOption = {
+  name: string;
+  values: string[];
+};
+
+type ProductDetails = {
+  id: string;
+  title: string;
+  handle: string;
+  description?: string | null;
+  featuredImage?: Image | null;
+  options: ProductOption[];
+  variants: { nodes: Variant[] };
+};
+
+type QuickViewModalProps = {
+  product: { title: string; handle: string; featuredImage?: Image | null };
+  onClose: () => void;
+};
+
+
+
 var closeModal = () => {
   setActiveId(null);
 
@@ -100,6 +145,32 @@ const QuickViewModal = ({ product, onClose }) => {
 
   var options = details?.options ?? [];
   var variants = details?.variants?.nodes ?? [];
+
+  var [ctaState, setCtaState] = useState<"idle" | "loading" | "success">("idle");
+
+  var hasResolvedAvailableVariant =
+  !!resolvedVariant && resolvedVariant.availableForSale;
+
+  function deterministicDelayMs(seed: string) {
+  var hash = 0;
+  for (var i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return 800 + (hash % 401); // 800..1200
+}
+
+async function onAddToBag() {
+  if (!hasResolvedAvailableVariant || !resolvedVariant) return;
+
+  setCtaState("loading");
+
+  var ms = deterministicDelayMs(resolvedVariant.id);
+  await new Promise((r) => setTimeout(r, ms));
+
+  setCtaState("success");
+
+  // consistent behavior: reset to idle after ~1.5s (don’t close modal)
+  setTimeout(() => setCtaState("idle"), 1500);
+}
+
 
   // focus moves into modal on open
   useEffect(() => {
