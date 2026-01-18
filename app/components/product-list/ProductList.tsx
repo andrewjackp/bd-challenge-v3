@@ -16,15 +16,17 @@ export const ProductList = ({ products }) => {
     return products.find((p) => p.id === activeId) ?? null;
   }, [activeId, products]);
 
-  var closeModal = () => {
-    setActiveId(null);
-    // restore focus to the element that opened the modal
+var closeModal = () => {
+  setActiveId(null);
+
+  requestAnimationFrame(() => {
     if (lastTriggerRef.current) lastTriggerRef.current.focus();
-  };
+  });
+};
 
   return (
     <>
-      <ul className="grid grid-cols-1 gap-4">
+      <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {products.map((product) => (
           <li key={product.id}>
             <ProductCard
@@ -66,7 +68,16 @@ const QuickViewModal = ({ product, onClose }) => {
     };
   }, []);
 
-  // close on Escape
+  var modalRef = useRef(null);
+
+  useEffect(() => {
+    // focus moves into modal on open
+    if (modalRef.current) modalRef.current.focus();
+    else if (closeBtnRef.current) closeBtnRef.current.focus();
+  }, []);
+
+
+  // close on esc
   useEffect(() => {
     var onKeyDown = (e) => {
       if (e.key === "Escape") onClose();
@@ -118,7 +129,9 @@ const QuickViewModal = ({ product, onClose }) => {
       <div className="absolute inset-0 bg-black/60" />
 
       <div
-        className="relative z-10 w-full max-w-3xl rounded-2xl bg-white dark:bg-black border border-black/10 dark:border-white/10 p-5"
+        ref={modalRef}
+        tabIndex={-1}
+        className="relative z-10 w-full max-w-3xl rounded-2xl bg-white dark:bg-black border border-black/10 dark:border-white/10 p-5 outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -137,7 +150,7 @@ const QuickViewModal = ({ product, onClose }) => {
           </button>
         </div>
 
-        {/* Body */}
+        {/* body */}
         <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left: image */}
           <div>
@@ -154,7 +167,7 @@ const QuickViewModal = ({ product, onClose }) => {
             )}
           </div>
 
-          {/* Right: details */}
+          {/* right: details */}
           <div>
             {isLoading ? (
               <SkeletonDetails />
@@ -186,13 +199,16 @@ const QuickViewModal = ({ product, onClose }) => {
 const SkeletonDetails = () => {
   return (
     <div className="animate-pulse">
-      <div className="h-4 w-24 rounded bg-black/10 dark:bg-white/10" />
-      <div className="mt-2 h-4 w-48 rounded bg-black/10 dark:bg-white/10" />
+      <div className="h-5 w-3/4 rounded bg-black/10 dark:bg-white/10" />
+      <div className="mt-3 h-4 w-32 rounded bg-black/10 dark:bg-white/10" />
 
-      <div className="mt-6 h-4 w-28 rounded bg-black/10 dark:bg-white/10" />
-      <div className="mt-2 h-4 w-full rounded bg-black/10 dark:bg-white/10" />
-      <div className="mt-2 h-4 w-11/12 rounded bg-black/10 dark:bg-white/10" />
-      <div className="mt-2 h-4 w-10/12 rounded bg-black/10 dark:bg-white/10" />
+      <div className="mt-6 space-y-2">
+        <div className="h-4 w-full rounded bg-black/10 dark:bg-white/10" />
+        <div className="h-4 w-11/12 rounded bg-black/10 dark:bg-white/10" />
+        <div className="h-4 w-10/12 rounded bg-black/10 dark:bg-white/10" />
+      </div>
+
+      <div className="mt-6 h-9 w-28 rounded-lg bg-black/10 dark:bg-white/10" />
     </div>
   );
 };
